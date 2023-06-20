@@ -52,6 +52,7 @@ func remesh():
 	var normals = PackedVector3Array()
 	var indices = PackedInt32Array()
 	var count = 0
+	var now = Time.get_ticks_usec()
 	
 	for x in range(size.x):
 		for y in range(size.y):
@@ -103,7 +104,7 @@ func remesh():
 	print("%s\tVertices\t(%s per vox)" % [vert_count,verts_per_vox])
 	print("%s\tTris\t\t(%s per vox)"% [tri_count, tris_per_vox])
 	print("%s\tFaces\t\t(%s per vox)" % [face_count, faces_per_vox])
-	
+	print("Meshed in %sms" % ((Time.get_ticks_usec() - now)/1000.0))
 	surface_array[Mesh.ARRAY_VERTEX] = verts
 	surface_array[Mesh.ARRAY_NORMAL] = normals
 	surface_array[Mesh.ARRAY_INDEX] = indices
