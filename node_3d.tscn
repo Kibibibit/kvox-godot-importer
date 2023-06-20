@@ -6,3 +6,9 @@
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="."]
 mesh = ExtResource("1_mbwgb")
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.941612, 0.336701, 0, -0.336701, 0.941612, 0, 3.89931, 8.36362)
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.86388, 0.503699, 0, -0.503699, 0.86388, 0, 6.32714, 7.23687)

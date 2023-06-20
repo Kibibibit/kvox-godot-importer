@@ -52,12 +52,10 @@ func _import(source_file, save_path, options, r_platform_variants, r_gen_files):
 		var g = file.get_8()
 		var r = file.get_8()
 		colors.append(Color(r/255.0,g/255.0,b/255.0))
-		print(r,",",g,",",b)
 	
 	var width: int = file.get_16()
 	var height: int = file.get_16()
 	var depth: int = file.get_16()
-	print(width,",",height,",",depth)
 	
 	var data = []
 	

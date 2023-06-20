@@ -46,13 +46,6 @@ func _init(_size: Vector3i = Vector3i(1,1,1), data = [[[1]]], color_set=[Color.W
 	remesh()
 
 func remesh():
-	for i in range(colors.size()):
-		var material = StandardMaterial3D.new()
-		material.albedo_color = colors[i]
-		materials.append(material)
-		_remesh(i)
-
-func _remesh(color_index:int):
 	var tris = []
 	var surface_array = []
 	surface_array.resize(Mesh.ARRAY_MAX)
@@ -66,7 +59,7 @@ func _remesh(color_index:int):
 	for x in range(size.x):
 		for y in range(size.y):
 			for z in range(size.z):
-				if (mesh_data[x][y][z] == color_index+1):
+				if (mesh_data[x][y][z] != 0):
 					count += 1
 					for k in _dirs.keys():
 						var dir = _dirs[k]
@@ -108,5 +101,27 @@ func _remesh(color_index:int):
 	surface_array[Mesh.ARRAY_INDEX] = indices
 	
 	add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, surface_array)
-	surface_set_name(color_index, "Color: %s" % (color_index +1))
-	surface_set_material(color_index, materials[color_index])
+	
+	var material = ShaderMaterial.new()
+	
+	var slices: Array[Image] = []
+	for z in range(size.z):
+		var img = Image.new().create(size.x,size.y, false, Image.FORMAT_RGBA8)
+		var pixels: Array[int] = []
+		for x in range(size.x):
+			for y in range(size.y):
+				var c_index = mesh_data[x][y][z]-1
+				var color = Color(0,0,0,0)
+				if (c_index >= 0):
+					color = colors[c_index]
+				img.set_pixel(x,y,color)
+		
+		slices.append(img)
+	var sampler: Texture3D = ImageTexture3D.new()
+	sampler.create(Image.FORMAT_RGBA8, size.x, size.y, size.z, false, slices)
+	material.set_shader_parameter("data",sampler)
+
+	
+	surface_set_material(0,material)
+	material.shader = load("res://voxel.gdshader")
+	
