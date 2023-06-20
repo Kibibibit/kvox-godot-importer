@@ -1,8 +1,8 @@
 [gd_scene load_steps=2 format=3 uid="uid://choav3nm37sj"]
 
-[ext_resource type="ArrayMesh" uid="uid://di2xavw8bn051" path="res://out.kvox" id="1_52tuq"]
+[ext_resource type="ArrayMesh" uid="uid://bt542yykocda3" path="res://out.kvox" id="1_mbwgb"]
 
 [node name="Node3D" type="Node3D"]
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="."]
-mesh = ExtResource("1_52tuq")
+mesh = ExtResource("1_mbwgb")

@@ -5,7 +5,8 @@ class_name VoxelMesh
 @export var scale: Vector3 = Vector3(1,1,1)
 
 var mesh_data
-
+var colors
+var materials = []
 const _points = [
 	Vector3(0,0,0), #0
 	Vector3(0,0,1), #1
@@ -38,12 +39,20 @@ const _verts = {
 	Faces.NEG_Z:[Vector3(1,1,0), Vector3(0,1,0), Vector3(1,0,0), Vector3(0,0,0)],
 }
 
-func _init(_size: Vector3i = Vector3i(1,1,1), data = [[[1]]]):
+func _init(_size: Vector3i = Vector3i(1,1,1), data = [[[1]]], color_set=[Color.WHITE]):
 	mesh_data = data
 	size = _size
+	colors = color_set
 	remesh()
 
 func remesh():
+	for i in range(colors.size()):
+		var material = StandardMaterial3D.new()
+		material.albedo_color = colors[i]
+		materials.append(material)
+		_remesh(i)
+
+func _remesh(color_index:int):
 	var tris = []
 	var surface_array = []
 	surface_array.resize(Mesh.ARRAY_MAX)
@@ -57,7 +66,7 @@ func remesh():
 	for x in range(size.x):
 		for y in range(size.y):
 			for z in range(size.z):
-				if (mesh_data[x][y][z] != 0):
+				if (mesh_data[x][y][z] == color_index+1):
 					count += 1
 					for k in _dirs.keys():
 						var dir = _dirs[k]
@@ -93,20 +102,11 @@ func remesh():
 						
 	for tri in tris:
 		indices.append_array([tri.x, tri.y, tri.z])
-	var vert_count = verts.size()
-	var tri_count = indices.size()/3
-	var face_count = tri_count/2
-	var verts_per_vox = vert_count/count as float
-	var tris_per_vox = tri_count/count as float
-	var faces_per_vox = face_count/count as float
-	print("=====")
-	print("For %s voxels" % count)
-	print("%s\tVertices\t(%s per vox)" % [vert_count,verts_per_vox])
-	print("%s\tTris\t\t(%s per vox)"% [tri_count, tris_per_vox])
-	print("%s\tFaces\t\t(%s per vox)" % [face_count, faces_per_vox])
-	print("Meshed in %sms" % ((Time.get_ticks_usec() - now)/1000.0))
+
 	surface_array[Mesh.ARRAY_VERTEX] = verts
 	surface_array[Mesh.ARRAY_NORMAL] = normals
 	surface_array[Mesh.ARRAY_INDEX] = indices
 	
 	add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, surface_array)
+	surface_set_name(color_index, "Color: %s" % (color_index +1))
+	surface_set_material(color_index, materials[color_index])
