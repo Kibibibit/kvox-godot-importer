@@ -92,11 +92,17 @@ func remesh():
 						
 	for tri in tris:
 		indices.append_array([tri.x, tri.y, tri.z])
+	var vert_count = verts.size()
+	var tri_count = indices.size()/3
+	var face_count = tri_count/2
+	var verts_per_vox = vert_count/count as float
+	var tris_per_vox = tri_count/count as float
+	var faces_per_vox = face_count/count as float
 	print("=====")
 	print("For %s voxels" % count)
-	print("%s\tVertices" % verts.size())
-	print("%s\tTris" % (indices.size()/3))
-	print("%s\tFaces" % (indices.size()/6))
+	print("%s\tVertices\t(%s per vox)" % [vert_count,verts_per_vox])
+	print("%s\tTris\t\t(%s per vox)"% [tri_count, tris_per_vox])
+	print("%s\tFaces\t\t(%s per vox)" % [face_count, faces_per_vox])
 	
 	surface_array[Mesh.ARRAY_VERTEX] = verts
 	surface_array[Mesh.ARRAY_NORMAL] = normals
