@@ -1,20 +1,25 @@
 extends ArrayMesh
 class_name VoxelMesh
-@export
-var _size: Vector3i = Vector3i(0,0,0)
-@export
-var _created: bool = false
-@export
-var _albedo_texture: ImageTexture
-@export
-var _metallic_texture: ImageTexture
-@export
-var _roughness_texture: ImageTexture
 
-@export
-var _mesh_data: Array[Array] = []
-@export
-var _materials: Array[VoxelMaterial] = []
+## The size of the model, in voxels
+@export var _size: Vector3i = Vector3i(0,0,0)
+
+## Each material that this model uses
+@export var _materials: Array[VoxelMaterial] = []
+
+@export_group("Textures")
+## The texture storing color information for this model
+@export var _albedo_texture: ImageTexture
+## The texture storing a metallic map for this model
+@export var _metallic_texture: ImageTexture
+## The texture storing a roughness map for this model
+@export var _roughness_texture: ImageTexture
+@export_group("Raw data")
+## Has this model been created with VoxelMesh.create()?
+@export var _created: bool = false
+## Stores the raw voxel mesh data
+@export var _mesh_data: Array[Array] = []
+
 
 enum Faces {X, NEG_X, Y, NEG_Y, Z, NEG_Z}
 
