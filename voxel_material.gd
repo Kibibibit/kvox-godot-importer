@@ -1,8 +1,11 @@
 extends Resource
 class_name VoxelMaterial
 
+@export
 var color: Color
+@export_range(0,1.0)
 var metallic: float
+@export_range(0,1.0)
 var roughness: float
 
 ## Takes in raw bytes for each field and converts them to the relevant datatypes

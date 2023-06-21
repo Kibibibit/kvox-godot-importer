@@ -1,13 +1,19 @@
 extends ArrayMesh
 class_name VoxelMesh
-
+@export
 var _size: Vector3i = Vector3i(0,0,0)
+@export
 var _created: bool = false
+@export
 var _albedo_texture: ImageTexture
+@export
 var _metallic_texture: ImageTexture
+@export
 var _roughness_texture: ImageTexture
 
+@export
 var _mesh_data: Array[Array] = []
+@export
 var _materials: Array[VoxelMaterial] = []
 
 enum Faces {X, NEG_X, Y, NEG_Y, Z, NEG_Z}
