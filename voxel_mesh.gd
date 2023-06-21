@@ -125,13 +125,16 @@ func create(size: Vector3i, mesh_data: Array[Array], materials: Array[VoxelMater
 	_mesh_data = mesh_data
 	_materials = materials
 	_created = true
-	_generate_texture()
+		_generate_texture()
 	remesh()
+	_set_material()
+
+func retexture()->void:
+	_generate_texture()
+	_set_material()
 
 func remesh() -> void:
 	assert(_created, "Call VoxelMesh.create() before trying to remesh!")
-	var surface_array = []
-	surface_array.resize(Mesh.ARRAY_MAX)
 	var verts = PackedVector3Array()
 	var uvs = PackedVector2Array()
 	var normals = PackedVector3Array()
@@ -144,13 +147,19 @@ func remesh() -> void:
 				if (material_index != -1):
 					_draw_voxel(Vector3(x,y,z), material_index, verts, uvs, normals, indices)
 		
+	var surface_array = []
+	if (get_surface_count() == 0):
+		surface_array.resize(Mesh.ARRAY_MAX)
+		add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, surface_array)
+	else:
+		surface_array = surface_get_arrays(0)
 	surface_array[Mesh.ARRAY_VERTEX] = verts
 	surface_array[Mesh.ARRAY_NORMAL] = normals
 	surface_array[Mesh.ARRAY_INDEX] = indices
 	surface_array[Mesh.ARRAY_TEX_UV] = uvs
-	
-	add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, surface_array)
-	
+
+
+func _set_material():
 	var material = StandardMaterial3D.new()
 	material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
 	material.albedo_texture = _albedo_texture
