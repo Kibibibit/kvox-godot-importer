@@ -7,6 +7,8 @@ class_name VoxelMesh
 ## Each material that this model uses
 @export var _materials: Array[VoxelMaterial] = []
 
+@export var _emission_energy: float = 3.33
+
 @export_group("Textures")
 ## The texture storing color information for this model
 @export var _albedo_texture: ImageTexture
@@ -14,6 +16,8 @@ class_name VoxelMesh
 @export var _metallic_texture: ImageTexture
 ## The texture storing a roughness map for this model
 @export var _roughness_texture: ImageTexture
+## The texture controlling the emission strenght for this model
+@export var _emission_texture: ImageTexture
 @export_group("Raw data")
 ## Has this model been created with VoxelMesh.create()?
 @export var _created: bool = false
@@ -40,7 +44,7 @@ const _verts = {
 	Faces.Z:[Vector3(0,0,1), Vector3(0,1,1), Vector3(1,0,1), Vector3(1,1,1)],
 	Faces.NEG_Z:[Vector3(1,1,0), Vector3(0,1,0), Vector3(1,0,0), Vector3(0,0,0)],
 }
-const _uvs = [Vector2(1,1), Vector2(0,1),Vector2(1,0),Vector2(0,0)]
+const _uvs = [Vector2(0.8,0.8), Vector2(0.2,0.8),Vector2(0.2,0.8),Vector2(0.2,0.8)]
 
 const _index_offsets = [0,1,2,3,2,1]
 
@@ -73,14 +77,17 @@ func _generate_texture():
 	var albedo_img: Image = Image.new().create(_materials.size(), 1, false, Image.FORMAT_RGB8)
 	var metallic_img: Image = Image.new().create(_materials.size(), 1, false, Image.FORMAT_R8)
 	var roughness_img: Image = Image.new().create(_materials.size(), 1, false, Image.FORMAT_R8)
+	var emission_img: Image = Image.new().create(_materials.size(), 1, false, Image.FORMAT_R8)
 	for x in range(_materials.size()):
 		albedo_img.set_pixel(x,0,_materials[x].color)
 		metallic_img.set_pixel(x,0,_materials[x].metal_color())
 		roughness_img.set_pixel(x,0,_materials[x].rough_color())
+		emission_img.set_pixel(x,0,_materials[x].emission_energy_color())
 		
 	_albedo_texture = ImageTexture.create_from_image(albedo_img)
 	_metallic_texture = ImageTexture.create_from_image(metallic_img)
 	_roughness_texture = ImageTexture.create_from_image(roughness_img)
+	_emission_texture = ImageTexture.create_from_image(emission_img)
 
 
 func _can_draw_face(direction: Faces, point: Vector3):
@@ -180,5 +187,15 @@ func _set_material():
 	material.albedo_texture = _albedo_texture
 	material.metallic_texture = _metallic_texture
 	material.roughness_texture = _roughness_texture
+	material.emission_enabled = true
+	material.emission_texture = _emission_texture
+	material.emission_energy_multiplier = _emission_energy
 	surface_set_material(0,material)
-	
+
+func set_emission_energy(val: float):
+	assert(_created, "Call VoxelMesh.create first!")
+	_emission_energy = val
+	surface_get_material(0).emission_energy_multipler = val
+
+func get_emission_energy():
+	return _emission_energy
