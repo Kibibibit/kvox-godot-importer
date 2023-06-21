@@ -148,15 +148,19 @@ func remesh() -> void:
 					_draw_voxel(Vector3(x,y,z), material_index, verts, uvs, normals, indices)
 		
 	var surface_array = []
+	var has_surface = false
 	if (get_surface_count() == 0):
 		surface_array.resize(Mesh.ARRAY_MAX)
-		add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, surface_array)
+		
 	else:
+		has_surface = true
 		surface_array = surface_get_arrays(0)
 	surface_array[Mesh.ARRAY_VERTEX] = verts
 	surface_array[Mesh.ARRAY_NORMAL] = normals
 	surface_array[Mesh.ARRAY_INDEX] = indices
 	surface_array[Mesh.ARRAY_TEX_UV] = uvs
+	if (!has_surface):
+		add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, surface_array)
 
 
 func _set_material():
