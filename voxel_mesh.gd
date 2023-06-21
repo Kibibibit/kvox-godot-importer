@@ -125,7 +125,7 @@ func create(size: Vector3i, mesh_data: Array[Array], materials: Array[VoxelMater
 	_mesh_data = mesh_data
 	_materials = materials
 	_created = true
-		_generate_texture()
+	_generate_texture()
 	remesh()
 	_set_material()
 
