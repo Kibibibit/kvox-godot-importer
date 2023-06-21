@@ -1,6 +1,7 @@
 @tool
 extends EditorImportPlugin
 
+const _file_header = "KVOX"
 
 
 func _get_preset_count():
@@ -42,37 +43,50 @@ func _import(source_file, save_path, options, r_platform_variants, r_gen_files):
 	var file = FileAccess.open(source_file, FileAccess.READ)
 	if file == null:
 		return FileAccess.get_open_error()
-		
-	var color_depth: int = file.get_8()
 	
-	var colors = []
+	## Check the header is valid
+	for letter in _file_header:
+		var byte = PackedByteArray([file.get_8()]).get_string_from_ascii()
+		assert(byte == letter, "Malformed header in %s" % source_file)
 	
-	for c in range(color_depth):
-		var b = file.get_8()
-		var g = file.get_8()
-		var r = file.get_8()
-		colors.append(Color(r/255.0,g/255.0,b/255.0))
-	
+	## Get the dimensions of the model
 	var width: int = file.get_16()
 	var height: int = file.get_16()
 	var depth: int = file.get_16()
 	
-	var data = []
+	var color_depth: int = file.get_8()
+	
+	var materials: Array[VoxelMaterial] = []
+	
+	for c in range(color_depth):
+		var r = file.get_8()
+		var g = file.get_8()
+		var b = file.get_8()
+		var metallic = file.get_8()
+		var roughness = file.get_8()
+		var material = VoxelMaterial.new()
+		material.create_from_bytes(r,g,b,metallic,roughness)
+		materials.append(material)
+	
+	
+	
+	var data: Array[Array] = []
 	
 	for x in range(width):
-		var slice_vert = []
+		var slice_vert: Array[Array] = []
 		for y in range(height):
-			var slice_hori = []
+			var slice_hori: Array[int] = []
 			for z in range(depth):
 				slice_hori.append(file.get_8())
 			slice_vert.append(slice_hori)
 		data.append(slice_vert)
 	file.close()
 		
-	var mesh: VoxelMesh = VoxelMesh.new(
+	var mesh: VoxelMesh = VoxelMesh.new()
+	mesh.create(
 		Vector3i(width,height,depth),
 		data,
-		colors
+		materials
 	)
 	
 	return ResourceSaver.save(mesh, "%s.%s" % [save_path, _get_save_extension()])
