@@ -7,8 +7,6 @@ class_name VoxelMesh
 ## Each material that this model uses
 @export var _materials: Array[VoxelMaterial] = []
 
-@export var _material: ShaderMaterial
-
 @export var _emission_energy: float = 3.33
 
 @export_group("Raw data")
@@ -116,14 +114,13 @@ func _draw_voxel(
 			if (_can_draw_face(direction,point)):
 				_draw_face(direction, point, material_index,verts, uvs, normals, indices)
 
-func create(size: Vector3i, mesh_data: Array[Array], materials:Array[VoxelMaterial], material:ShaderMaterial) -> void:
+func create(size: Vector3i, mesh_data: Array[Array], materials:Array[VoxelMaterial]) -> void:
 	_size = size
 	_mesh_data = mesh_data
 	_created = true
-	_material = material
 	_materials = materials
 	remesh()
-	surface_set_material(0, material)
+	_generate_textures()
 
 
 
@@ -156,6 +153,31 @@ func remesh() -> void:
 	if (!has_surface):
 		add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, surface_array)
 	
-
-
-
+func _generate_textures():
+	var albedo_img: Image = Image.new().create(_materials.size(), 1, false, Image.FORMAT_RGB8)
+	var metallic_img: Image = Image.new().create(_materials.size(), 1, false, Image.FORMAT_RGB8)
+	var roughness_img: Image = Image.new().create(_materials.size(), 1, false, Image.FORMAT_RGB8)
+	var emission_img: Image = Image.new().create(_materials.size(), 1, false, Image.FORMAT_RGB8)
+	for x in range(_materials.size()):
+		albedo_img.set_pixel(x,0,_materials[x].color)
+		metallic_img.set_pixel(x,0,_materials[x].metal_color())
+		roughness_img.set_pixel(x,0,_materials[x].rough_color())
+		
+		emission_img.set_pixel(x,0,
+		Color(
+			_materials[x].color.r*_materials[x].emission_energy,
+			_materials[x].color.g*_materials[x].emission_energy,
+			_materials[x].color.b*_materials[x].emission_energy
+		)
+		)
+	var material = StandardMaterial3D.new()
+	
+	material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
+	material.albedo_texture = ImageTexture.create_from_image(albedo_img)
+	material.metallic_texture = ImageTexture.create_from_image(metallic_img)
+	material.roughness_texture = ImageTexture.create_from_image(roughness_img)
+	material.emission_texture = ImageTexture.create_from_image(emission_img)
+	
+	material.emission_enabled = true
+	material.emission_energy_multiplier = 3.33
+	surface_set_material(0, material)
