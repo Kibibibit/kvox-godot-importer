@@ -83,6 +83,7 @@ func _generate_texture():
 		metallic_img.set_pixel(x,0,_materials[x].metal_color())
 		roughness_img.set_pixel(x,0,_materials[x].rough_color())
 		emission_img.set_pixel(x,0,_materials[x].emission_energy_color())
+		print(roughness_img.get_pixel(x,0),metallic_img.get_pixel(x,0))
 		
 	_albedo_texture = ImageTexture.create_from_image(albedo_img)
 	_metallic_texture = ImageTexture.create_from_image(metallic_img)
@@ -188,16 +189,5 @@ func _set_material():
 	material.set_shader_parameter("metallic_texture", _metallic_texture)
 	material.set_shader_parameter("roughness_texture", _roughness_texture)
 	material.set_shader_parameter("emission_texture", _emission_texture)
-	#material.emission_enabled = true
-	#material.emission_texture = _emission_texture
-	#material.emission_intensity
-	#material.emission_energy_multiplier = _emission_energy
 	surface_set_material(0,material)
 
-func set_emission_energy(val: float):
-	assert(_created, "Call VoxelMesh.create first!")
-	_emission_energy = val
-	surface_get_material(0).emission_energy_multipler = val
-
-func get_emission_energy():
-	return _emission_energy
