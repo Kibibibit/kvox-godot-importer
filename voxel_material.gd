@@ -25,3 +25,5 @@ func rough_color() -> Color:
 
 func emission_energy_color() -> Color:
 	return Color(emission_energy, emission_energy, emission_energy)
+
+

@@ -53,12 +53,7 @@ func _import(source_file, save_path, options, r_platform_variants, r_gen_files):
 	var file = FileAccess.open(source_file, FileAccess.READ)
 	if file == null:
 		return FileAccess.get_open_error()
-	var mesh = _import_kvox_mesh(file, source_file)
-	
-	return ResourceSaver.save(mesh, "%s.%s" % [save_path, _get_save_extension()])
 
-
-func _import_kvox_mesh(file:FileAccess, source_file:String)->VoxelMesh:
 	## Check the header is valid
 	for byte in _header:
 		assert(byte == file.get_8(), "Malformed header in %s" % source_file)
@@ -161,13 +156,44 @@ func _import_kvox_mesh(file:FileAccess, source_file:String)->VoxelMesh:
 	assert(!all_zeros, "Mesh has no voxels!")
 	var transparency = (data_layout & 0b0100000) > 0
 	var mesh: VoxelMesh = VoxelMesh.new()
+
+	var albedo_img: Image = Image.new().create(materials.size(), 1, false, Image.FORMAT_RGB8)
+	var metallic_img: Image = Image.new().create(materials.size(), 1, false, Image.FORMAT_R8)
+	var roughness_img: Image = Image.new().create(materials.size(), 1, false, Image.FORMAT_R8)
+	var emission_img: Image = Image.new().create(materials.size(), 1, false, Image.FORMAT_R8)
+	for x in range(materials.size()):
+		albedo_img.set_pixel(x,0,materials[x].color)
+		metallic_img.set_pixel(x,0,materials[x].metal_color())
+		roughness_img.set_pixel(x,0,materials[x].rough_color())
+		emission_img.set_pixel(x,0,materials[x].emission_energy_color())
 	
+	var albedo_texture = ImageTexture.create_from_image(albedo_img)
+	var metallic_texture = ImageTexture.create_from_image(metallic_img)
+	var roughness_texture = ImageTexture.create_from_image(roughness_img)
+	var emission_texture = ImageTexture.create_from_image(emission_img)
+	
+	var material = ShaderMaterial.new()
+	material.shader =  preload("voxel_shader.gdshader")
+	material.set_shader_parameter("albedo_texture", albedo_texture)
+	material.set_shader_parameter("metallic_texture", metallic_texture)
+	material.set_shader_parameter("roughness_texture", roughness_texture)
+	material.set_shader_parameter("emission_texture", emission_texture)
+	roughness_img.save_png("res://rough.png")
+	metallic_img.save_png("res://metallic.png")
+	
+	
+	var shader_path:String = "%s.material.%s" % [save_path, _get_save_extension()]
+	ResourceSaver.save(material,shader_path)
+	r_gen_files.push_back(shader_path)
 	mesh.create(
 		Vector3i(width,height,depth),
 		data,
 		materials,
+		load(shader_path)
 	)
-	return mesh
+	
+	return ResourceSaver.save(mesh, "%s.%s" % [save_path, _get_save_extension()])
+
 
 func _get_chunk_type(file:FileAccess) -> int:
 	for byte in _chunk_header:

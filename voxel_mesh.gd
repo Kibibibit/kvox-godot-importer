@@ -7,22 +7,16 @@ class_name VoxelMesh
 ## Each material that this model uses
 @export var _materials: Array[VoxelMaterial] = []
 
+@export var _material: ShaderMaterial
+
 @export var _emission_energy: float = 3.33
 
-@export_group("Textures")
-## The texture storing color information for this model
-@export var _albedo_texture: ImageTexture
-## The texture storing a metallic map for this model
-@export var _metallic_texture: ImageTexture
-## The texture storing a roughness map for this model
-@export var _roughness_texture: ImageTexture
-## The texture controlling the emission strenght for this model
-@export var _emission_texture: ImageTexture
 @export_group("Raw data")
 ## Has this model been created with VoxelMesh.create()?
 @export var _created: bool = false
 ## Stores the raw voxel mesh data
 @export var _mesh_data: Array[Array] = []
+
 
 
 enum Faces {X, NEG_X, Y, NEG_Y, Z, NEG_Z}
@@ -73,23 +67,6 @@ func _vector_in_range(x:Vector3, _min:Vector3, _max:Vector3):
 		!_compare_vectors(_compare_mode_geq, x, _max)
 	)
 
-func _generate_texture():
-	var albedo_img: Image = Image.new().create(_materials.size(), 1, false, Image.FORMAT_RGBA8)
-	var metallic_img: Image = Image.new().create(_materials.size(), 1, false, Image.FORMAT_R8)
-	var roughness_img: Image = Image.new().create(_materials.size(), 1, false, Image.FORMAT_R8)
-	var emission_img: Image = Image.new().create(_materials.size(), 1, false, Image.FORMAT_R8)
-	for x in range(_materials.size()):
-		albedo_img.set_pixel(x,0,_materials[x].color)
-		metallic_img.set_pixel(x,0,_materials[x].metal_color())
-		roughness_img.set_pixel(x,0,_materials[x].rough_color())
-		emission_img.set_pixel(x,0,_materials[x].emission_energy_color())
-		print(roughness_img.get_pixel(x,0),metallic_img.get_pixel(x,0))
-		
-	_albedo_texture = ImageTexture.create_from_image(albedo_img)
-	_metallic_texture = ImageTexture.create_from_image(metallic_img)
-	_roughness_texture = ImageTexture.create_from_image(roughness_img)
-	_emission_texture = ImageTexture.create_from_image(emission_img)
-
 
 func _can_draw_face(direction: Faces, point: Vector3):
 	var dir: Vector3 = _dirs[direction]
@@ -139,18 +116,16 @@ func _draw_voxel(
 			if (_can_draw_face(direction,point)):
 				_draw_face(direction, point, material_index,verts, uvs, normals, indices)
 
-func create(size: Vector3i, mesh_data: Array[Array], materials: Array[VoxelMaterial]) -> void:
+func create(size: Vector3i, mesh_data: Array[Array], materials:Array[VoxelMaterial], material:ShaderMaterial) -> void:
 	_size = size
 	_mesh_data = mesh_data
-	_materials = materials
 	_created = true
-	_generate_texture()
+	_material = material
+	_materials = materials
 	remesh()
-	_set_material()
+	surface_set_material(0, material)
 
-func retexture()->void:
-	_generate_texture()
-	_set_material()
+
 
 func remesh() -> void:
 	assert(_created, "Call VoxelMesh.create() before trying to remesh!")
@@ -180,14 +155,7 @@ func remesh() -> void:
 	surface_array[Mesh.ARRAY_TEX_UV] = uvs
 	if (!has_surface):
 		add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, surface_array)
+	
 
 
-func _set_material():
-	var material =  ShaderMaterial.new()
-	material.shader = preload("voxel_shader.gdshader")
-	material.set_shader_parameter("albedo_texture", _albedo_texture)
-	material.set_shader_parameter("metallic_texture", _metallic_texture)
-	material.set_shader_parameter("roughness_texture", _roughness_texture)
-	material.set_shader_parameter("emission_texture", _emission_texture)
-	surface_set_material(0,material)
 
