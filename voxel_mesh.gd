@@ -74,7 +74,7 @@ func _vector_in_range(x:Vector3, _min:Vector3, _max:Vector3):
 	)
 
 func _generate_texture():
-	var albedo_img: Image = Image.new().create(_materials.size(), 1, false, Image.FORMAT_RGB8)
+	var albedo_img: Image = Image.new().create(_materials.size(), 1, false, Image.FORMAT_RGBA8)
 	var metallic_img: Image = Image.new().create(_materials.size(), 1, false, Image.FORMAT_R8)
 	var roughness_img: Image = Image.new().create(_materials.size(), 1, false, Image.FORMAT_R8)
 	var emission_img: Image = Image.new().create(_materials.size(), 1, false, Image.FORMAT_R8)
@@ -182,14 +182,16 @@ func remesh() -> void:
 
 
 func _set_material():
-	var material = StandardMaterial3D.new()
-	material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
-	material.albedo_texture = _albedo_texture
-	material.metallic_texture = _metallic_texture
-	material.roughness_texture = _roughness_texture
-	material.emission_enabled = true
-	material.emission_texture = _emission_texture
-	material.emission_energy_multiplier = _emission_energy
+	var material =  ShaderMaterial.new()
+	material.shader = preload("voxel_shader.gdshader")
+	material.set_shader_parameter("albedo_texture", _albedo_texture)
+	material.set_shader_parameter("metallic_texture", _metallic_texture)
+	material.set_shader_parameter("roughness_texture", _roughness_texture)
+	material.set_shader_parameter("emission_texture", _emission_texture)
+	#material.emission_enabled = true
+	#material.emission_texture = _emission_texture
+	#material.emission_intensity
+	#material.emission_energy_multiplier = _emission_energy
 	surface_set_material(0,material)
 
 func set_emission_energy(val: float):
