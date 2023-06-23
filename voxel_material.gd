@@ -23,4 +23,17 @@ func metal_color() -> Color:
 func rough_color() -> Color:
 	return Color8(roughness, 0,0)
 
+func to_standard_material():
+	var out: StandardMaterial3D = StandardMaterial3D.new()
+	out.albedo_color = color
+	out.metallic = metallic/255.0
+	out.roughness = roughness/255.0
+	out.emission_enabled = true
+	out.emission_enabled = 3.33
+	out.emission = Color(
+			color.r*emission_energy,
+			color.g*emission_energy,
+			color.b*emission_energy
+		)
+	return out
 

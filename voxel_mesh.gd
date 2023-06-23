@@ -13,6 +13,12 @@ const _voxel_chunk_type = 2
 const _x_flag = 0b00
 const _y_flag = 0b01
 const _z_flag = 0b10
+const _pos_x = 0b000001
+const _pos_y = 0b000010
+const _pos_z = 0b000100
+const _neg_x = 0b001000
+const _neg_y = 0b010000
+const _neg_z = 0b100000
 
 ## The size of the model, in voxels
 @export var _size: Vector3i = Vector3i(0,0,0)
@@ -28,7 +34,7 @@ const _z_flag = 0b10
 ## Stores the raw voxel mesh data
 @export var _mesh_data: Array[Array] = []
 
-
+@export var _material: StandardMaterial3D
 
 enum Faces {X, NEG_X, Y, NEG_Y, Z, NEG_Z}
 
@@ -140,8 +146,9 @@ func create(size: Vector3i, mesh_data: Array[Array], materials:Array[VoxelMateri
 	_mesh_data = mesh_data
 	_created = true
 	_materials = materials
-	remesh()
 	_generate_textures()
+	remesh()
+	
 
 
 
@@ -160,20 +167,162 @@ func remesh() -> void:
 					_draw_voxel(Vector3(x,y,z), material_index, verts, uvs, normals, indices)
 		
 	var surface_array = []
-	var has_surface = false
-	if (get_surface_count() == 0):
-		surface_array.resize(Mesh.ARRAY_MAX)
-		
-	else:
-		has_surface = true
-		surface_array = surface_get_arrays(0)
+	surface_array.resize(Mesh.ARRAY_MAX)
 	surface_array[Mesh.ARRAY_VERTEX] = verts
 	surface_array[Mesh.ARRAY_NORMAL] = normals
 	surface_array[Mesh.ARRAY_INDEX] = indices
 	surface_array[Mesh.ARRAY_TEX_UV] = uvs
-	if (!has_surface):
+	if (get_surface_count() > 0):
+		clear_surfaces()
+	if (verts.size() > 0):
 		add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, surface_array)
+		surface_set_material(0, _material)
+
+func remove_voxel(pos: Vector3i) -> bool:
+	if (voxel_at(pos) > 0):
+		_mesh_data[pos.x][pos.y][pos.z] = 0
+		var empty_planes = _empty_plane(pos)
+		while (empty_planes > 0):
+			_resize(empty_planes, true, Vector3i(1,1,1))
+			empty_planes = _empty_plane(pos)
+			if _size == Vector3i(0,0,0):
+				break
+			
+		remesh()
+		return true
+	else:
+		return false
+
+func add_voxel(pos: Vector3i, material: int):
+	if (voxel_at(pos) < 0):
+		var planes = 0b000000
+		var diff = Vector3i(0,0,0)
+		if (pos.x < 0):
+			planes += _neg_x
+			diff.x = abs(pos.x)
+			pos.x = 0
+		elif (pos.x >= _size.x):
+			planes += _pos_x
+			diff.x = pos.x-_size.x+1
+			
+		if (pos.y < 0):
+			planes += _neg_y
+			diff.y = abs(pos.y)
+			pos.y = 0
+		elif(pos.y >= _size.y):
+			planes += _pos_y
+			diff.y = pos.y-_size.y+1
+			
+		if (pos.z < 0):
+			planes += _neg_z
+			diff.z = abs(pos.z)
+			pos.z = 0
+		elif(pos.z >= _size.z):
+			planes += _pos_z
+			diff.z = pos.z-_size.z+1
+			
+		_resize(planes,false,diff)
+	_mesh_data[pos.x][pos.y][pos.z] = material
+	remesh()
+
+func _empty_plane(pos: Vector3i):
+	var empty_planes = 0b000000
+	if (pos.x == 0):
+		empty_planes += _check_empty_x(pos)*_neg_x
+	elif(pos.x == _size.x-1):
+		empty_planes += _check_empty_x(pos)*_pos_x
+		
+	if (pos.y == 0):
+		empty_planes += _check_empty_y(pos)*_neg_y
+	elif(pos.y == _size.y-1):
+		empty_planes += _check_empty_y(pos)*_pos_y
 	
+	if (pos.z == 0):
+		empty_planes += _check_empty_z(pos)*_neg_z
+	elif (pos.z == _size.z-1):
+		empty_planes += _check_empty_z(pos)*_pos_z
+	return empty_planes
+	
+func _check_empty_plane(dim1:int, dim2:int, dir1:Vector3i, dir2:Vector3i, pos: Vector3i) -> int:
+	var _pos = pos
+	var empty = true
+	for a in dim1:
+		var start_loop: Vector3i = _pos
+		for b in dim2:
+			if (_mesh_data[_pos.x][_pos.y][_pos.z] > 0):
+				empty = false
+				break
+			_pos += dir2
+		_pos = start_loop
+		_pos += dir1
+	if (empty):
+		return 1
+	else:
+		return 0
+
+func _check_empty_x(pos: Vector3i) -> int:
+	return _check_empty_plane(
+		_size.y, _size.z,
+		Vector3i(0,1,0),
+		Vector3i(0,0,1),
+		Vector3i(pos.x,0,0)
+	)
+func _check_empty_y(pos:Vector3i) -> int:
+	return _check_empty_plane(
+		_size.x, _size.z,
+		Vector3i(1,0,0),
+		Vector3i(0,0,1),
+		Vector3i(0,pos.y,0)
+	)
+func _check_empty_z(pos:Vector3i) -> int:
+	return _check_empty_plane(
+		_size.x, _size.y,
+		Vector3i(1,0,0),
+		Vector3i(0,1,0),
+		Vector3i(0,0,pos.z)
+	)
+func _flag_set(value: int, flag:int)->bool:
+	return (value & flag) > 0
+
+func _resize(planes: int, shrink: bool, amount: Vector3i):
+	var mult = 1
+	if (!shrink):
+		mult = -1
+	var min_x = 0
+	var max_x = _size.x
+	var min_y = 0
+	var max_y = _size.y
+	var min_z = 0
+	var max_z = _size.z
+	if (_flag_set(planes,_neg_x)):
+		min_x += mult*amount.x
+	if (_flag_set(planes,_pos_x)):
+		max_x -= mult*amount.x
+	if (_flag_set(planes,_neg_y)):
+		min_y += mult*amount.y
+	if (_flag_set(planes,_pos_y)):
+		max_y -= mult*amount.y
+	if (_flag_set(planes,_neg_z)):
+		min_z += mult*amount.z
+	if (_flag_set(planes,_pos_z)):
+		max_z -= mult*amount.z
+	
+	var new_size = Vector3i(max_x-min_x, max_y-min_y, max_z-min_z)
+	var new_mesh_data: Array[Array] = []
+	for x in range(min_x, max_x):
+		var x_slice: Array[Array] = []
+		for y in range(min_y, max_y):
+			var y_slice: Array[int] = []
+			for z in range(min_z, max_z):
+				if (_vector_in_range(Vector3i(x,y,z), Vector3i(0,0,0), _size)):
+					y_slice.append(_mesh_data[x][y][z])
+				else:
+					y_slice.append(0)
+			x_slice.append(y_slice)
+		new_mesh_data.append(x_slice)
+	_size = new_size
+	_mesh_data = new_mesh_data
+
 func _generate_textures():
 	var albedo_img: Image = Image.new().create(_materials.size(), 1, false, Image.FORMAT_RGB8)
 	var metallic_img: Image = Image.new().create(_materials.size(), 1, false, Image.FORMAT_RGB8)
@@ -191,17 +340,19 @@ func _generate_textures():
 			_materials[x].color.b*_materials[x].emission_energy
 		)
 		)
-	var material = StandardMaterial3D.new()
+	_material = StandardMaterial3D.new()
 	
-	material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
-	material.albedo_texture = ImageTexture.create_from_image(albedo_img)
-	material.metallic_texture = ImageTexture.create_from_image(metallic_img)
-	material.roughness_texture = ImageTexture.create_from_image(roughness_img)
-	material.emission_texture = ImageTexture.create_from_image(emission_img)
+	_material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
+	_material.albedo_texture = ImageTexture.create_from_image(albedo_img)
+	_material.metallic_texture = ImageTexture.create_from_image(metallic_img)
+	_material.roughness_texture = ImageTexture.create_from_image(roughness_img)
+	_material.emission_texture = ImageTexture.create_from_image(emission_img)
 	
-	material.emission_enabled = true
-	material.emission_energy_multiplier = 3.33
-	surface_set_material(0, material)
+	_material.emission_enabled = true
+	_material.emission_energy_multiplier = 3.33
+
+
+
 
 static func load_from_file(path:String):
 	var file = FileAccess.open(path, FileAccess.READ)
