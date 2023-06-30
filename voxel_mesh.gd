@@ -1,24 +1,18 @@
 extends ArrayMesh
 class_name VoxelMesh
 
-const _header = [0x4B, 0x56, 0x4F, 0x58, 0x0D, 0x0A, 0x0A]
-const _chunk_header = [0x43, 0x48, 0x4E, 0x4B]
-const _chunk_end = [0x45, 0x4E, 0x44, 0x43]
-const _meta_chunk_header = [0x4D, 0x45, 0x54, 0x41]
-const _material_chunk_header = [0x4D, 0x41, 0x54, 0x52]
-const _voxel_chunk_header = [0x56, 0x4F, 0x58, 0x53]
+const header = [0x4B, 0x56, 0x4F, 0x58, 0x0D, 0x0A, 0x0A]
+const chunk_header = [0x43, 0x48, 0x4E, 0x4B]
+const chunk_end = [0x45, 0x4E, 0x44, 0x43]
+const meta_chunk_header = [0x4D, 0x45, 0x54, 0x41]
+const material_chunk_header = [0x4D, 0x41, 0x54, 0x52]
+const voxel_chunk_header = [0x56, 0x4F, 0x58, 0x53]
 const _meta_chunk_type = 0
 const _material_chunk_type = 1
 const _voxel_chunk_type = 2
-const _x_flag = 0b00
-const _y_flag = 0b01
-const _z_flag = 0b10
-const _pos_x = 0b000001
-const _pos_y = 0b000010
-const _pos_z = 0b000100
-const _neg_x = 0b001000
-const _neg_y = 0b010000
-const _neg_z = 0b100000
+const x_flag = 0b00
+const y_flag = 0b01
+const z_flag = 0b10
 
 ## The size of the model, in voxels
 @export var _size: Vector3i = Vector3i(0,0,0)
@@ -178,150 +172,6 @@ func remesh() -> void:
 		add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, surface_array)
 		surface_set_material(0, _material)
 
-func remove_voxel(pos: Vector3i) -> bool:
-	if (voxel_at(pos) > 0):
-		_mesh_data[pos.x][pos.y][pos.z] = 0
-		var empty_planes = _empty_plane(pos)
-		while (empty_planes > 0):
-			_resize(empty_planes, true, Vector3i(1,1,1))
-			empty_planes = _empty_plane(pos)
-			if _size == Vector3i(0,0,0):
-				break
-			
-		remesh()
-		return true
-	else:
-		return false
-
-func add_voxel(pos: Vector3i, material: int):
-	if (voxel_at(pos) < 0):
-		var planes = 0b000000
-		var diff = Vector3i(0,0,0)
-		if (pos.x < 0):
-			planes += _neg_x
-			diff.x = abs(pos.x)
-			pos.x = 0
-		elif (pos.x >= _size.x):
-			planes += _pos_x
-			diff.x = pos.x-_size.x+1
-			
-		if (pos.y < 0):
-			planes += _neg_y
-			diff.y = abs(pos.y)
-			pos.y = 0
-		elif(pos.y >= _size.y):
-			planes += _pos_y
-			diff.y = pos.y-_size.y+1
-			
-		if (pos.z < 0):
-			planes += _neg_z
-			diff.z = abs(pos.z)
-			pos.z = 0
-		elif(pos.z >= _size.z):
-			planes += _pos_z
-			diff.z = pos.z-_size.z+1
-			
-		_resize(planes,false,diff)
-	_mesh_data[pos.x][pos.y][pos.z] = material
-	remesh()
-
-func _empty_plane(pos: Vector3i):
-	var empty_planes = 0b000000
-	if (pos.x == 0):
-		empty_planes += _check_empty_x(pos)*_neg_x
-	elif(pos.x == _size.x-1):
-		empty_planes += _check_empty_x(pos)*_pos_x
-		
-	if (pos.y == 0):
-		empty_planes += _check_empty_y(pos)*_neg_y
-	elif(pos.y == _size.y-1):
-		empty_planes += _check_empty_y(pos)*_pos_y
-	
-	if (pos.z == 0):
-		empty_planes += _check_empty_z(pos)*_neg_z
-	elif (pos.z == _size.z-1):
-		empty_planes += _check_empty_z(pos)*_pos_z
-	return empty_planes
-	
-func _check_empty_plane(dim1:int, dim2:int, dir1:Vector3i, dir2:Vector3i, pos: Vector3i) -> int:
-	var _pos = pos
-	var empty = true
-	for a in dim1:
-		var start_loop: Vector3i = _pos
-		for b in dim2:
-			if (_mesh_data[_pos.x][_pos.y][_pos.z] > 0):
-				empty = false
-				break
-			_pos += dir2
-		_pos = start_loop
-		_pos += dir1
-	if (empty):
-		return 1
-	else:
-		return 0
-
-func _check_empty_x(pos: Vector3i) -> int:
-	return _check_empty_plane(
-		_size.y, _size.z,
-		Vector3i(0,1,0),
-		Vector3i(0,0,1),
-		Vector3i(pos.x,0,0)
-	)
-func _check_empty_y(pos:Vector3i) -> int:
-	return _check_empty_plane(
-		_size.x, _size.z,
-		Vector3i(1,0,0),
-		Vector3i(0,0,1),
-		Vector3i(0,pos.y,0)
-	)
-func _check_empty_z(pos:Vector3i) -> int:
-	return _check_empty_plane(
-		_size.x, _size.y,
-		Vector3i(1,0,0),
-		Vector3i(0,1,0),
-		Vector3i(0,0,pos.z)
-	)
-func _flag_set(value: int, flag:int)->bool:
-	return (value & flag) > 0
-
-func _resize(planes: int, shrink: bool, amount: Vector3i):
-	var mult = 1
-	if (!shrink):
-		mult = -1
-	var min_x = 0
-	var max_x = _size.x
-	var min_y = 0
-	var max_y = _size.y
-	var min_z = 0
-	var max_z = _size.z
-	if (_flag_set(planes,_neg_x)):
-		min_x += mult*amount.x
-	if (_flag_set(planes,_pos_x)):
-		max_x -= mult*amount.x
-	if (_flag_set(planes,_neg_y)):
-		min_y += mult*amount.y
-	if (_flag_set(planes,_pos_y)):
-		max_y -= mult*amount.y
-	if (_flag_set(planes,_neg_z)):
-		min_z += mult*amount.z
-	if (_flag_set(planes,_pos_z)):
-		max_z -= mult*amount.z
-	
-	var new_size = Vector3i(max_x-min_x, max_y-min_y, max_z-min_z)
-	var new_mesh_data: Array[Array] = []
-	for x in range(min_x, max_x):
-		var x_slice: Array[Array] = []
-		for y in range(min_y, max_y):
-			var y_slice: Array[int] = []
-			for z in range(min_z, max_z):
-				if (_vector_in_range(Vector3i(x,y,z), Vector3i(0,0,0), _size)):
-					y_slice.append(_mesh_data[x][y][z])
-				else:
-					y_slice.append(0)
-			x_slice.append(y_slice)
-		new_mesh_data.append(x_slice)
-	_size = new_size
-	_mesh_data = new_mesh_data
 
 func _generate_textures():
 	var albedo_img: Image = Image.new().create(_materials.size(), 1, false, Image.FORMAT_RGB8)
@@ -360,7 +210,7 @@ static func load_from_file(path:String):
 		return FileAccess.get_open_error()
 
 	## Check the header is valid
-	for byte in _header:
+	for byte in header:
 		assert(byte == file.get_8(), "Malformed header in %s" % path)
 	
 	var version: int
@@ -443,9 +293,9 @@ static func load_from_file(path:String):
 	var b_flag:int = (data_layout & 0b00001100) >> 2
 	var c_flag:int = (data_layout & 0b00000011)
 	var flag_mapping = {
-		_x_flag:width,
-		_y_flag:height,
-		_z_flag:depth
+		x_flag:width,
+		y_flag:height,
+		z_flag:depth
 	}
 	var i = 0
 	for a in range(flag_mapping[a_flag]):
@@ -468,21 +318,21 @@ static func load_from_file(path:String):
 	return mesh
 
 static func _get_chunk_type(file:FileAccess) -> int:
-	for byte in _chunk_header:
+	for byte in chunk_header:
 		assert(file.get_8() == byte, "Malformed chunk header!")
 	var chunk_type = [file.get_8(), file.get_8(), file.get_8(), file.get_8()]
 	var out = -1
-	if (chunk_type == _meta_chunk_header):
+	if (chunk_type == meta_chunk_header):
 		out = _meta_chunk_type
-	elif (chunk_type == _material_chunk_header):
+	elif (chunk_type == material_chunk_header):
 		out = _material_chunk_type
-	elif (chunk_type == _voxel_chunk_header):
+	elif (chunk_type == voxel_chunk_header):
 		out = _voxel_chunk_type
 	assert(out != -1, "Unrecognised chunk!")
 	return out
 
 static func _end_chunk(file: FileAccess):
-	for byte in _chunk_end:
+	for byte in chunk_end:
 		assert(file.get_8() == byte, "Chunk did not end when expected!")
 	
 static func _get_flag(a,b,c,a_flag,b_flag,c_flag,dim):
@@ -494,8 +344,7 @@ static func _get_flag(a,b,c,a_flag,b_flag,c_flag,dim):
 		return c
 
 static func _get_pos(a,b,c,a_flag,b_flag,c_flag):
-	var x = _get_flag(a,b,c,a_flag,b_flag,c_flag,_x_flag)
-	var y = _get_flag(a,b,c,a_flag,b_flag,c_flag,_y_flag)
-	var z = _get_flag(a,b,c,a_flag,b_flag,c_flag,_z_flag)
+	var x = _get_flag(a,b,c,a_flag,b_flag,c_flag,x_flag)
+	var y = _get_flag(a,b,c,a_flag,b_flag,c_flag,y_flag)
+	var z = _get_flag(a,b,c,a_flag,b_flag,c_flag,z_flag)
 	return Vector3i(x,y,z)
-
